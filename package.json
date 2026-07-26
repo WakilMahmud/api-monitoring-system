@@ -1,0 +1,19 @@
+{
+  "name": "api-monitoring-system",
+  "version": "1.0.0",
+  "description": "Real-Time API Hit Tracking & Monitoring System",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js"
+  },
+  "keywords": [
+    "api",
+    "monitoring",
+    "tracking",
+    "analytics"
+  ],
+  "author": "",
+  "license": "MIT"
+}
