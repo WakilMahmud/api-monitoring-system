@@ -1,55 +1,75 @@
 services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: api-monitoring-postgres
+    postgres:
+        image: postgres:16-alpine
+        container_name: api-monitoring-postgres
 
-    # Load credentials securely from .env
-    environment:
-      POSTGRES_DB: ${PG_DATABASE}
-      POSTGRES_USER: ${PG_USER}
-      POSTGRES_PASSWORD: ${PG_PASSWORD}
-      POSTGRES_INITDB_ARGS: "--encoding=UTF-8" # This optional environment variable can be used to send arguments to postgres initdb
+        # Load credentials securely from .env
+        environment:
+            POSTGRES_DB: ${PG_DATABASE}
+            POSTGRES_USER: ${PG_USER}
+            POSTGRES_PASSWORD: ${PG_PASSWORD}
+            POSTGRES_INITDB_ARGS: "--encoding=UTF-8" # This optional environment variable can be used to send arguments to postgres initdb
 
-    ports:
-      - "5432:${PG_PORT}" # "HOST:CONTAINER"
+        ports:
+            - "5432:${PG_PORT}" # "HOST:CONTAINER"
 
-    volumes:
-      - postgres_data:/var/lib/postgresql/data # Named Volume
-      - ./scripts/init-postgres.sql:/docker-entrypoint-initdb.d/init-postgres.sql # Bind Mount
-      # scripts in /docker-entrypoint-initdb.d are only run if you start the container with a data directory that is empty; any pre-existing database will be left untouched on container startup. (Reference: https://hub.docker.com/_/postgres)
+        volumes:
+            - postgres_data:/var/lib/postgresql/data # Named Volume
+            - ./scripts/init-postgres.sql:/docker-entrypoint-initdb.d/init-postgres.sql # Bind Mount
+            # scripts in /docker-entrypoint-initdb.d are only run if you start the container with a data directory that is empty; any pre-existing database will be left untouched on container startup. (Reference: https://hub.docker.com/_/postgres)
 
-    networks:
-      - api-monitoring-network
+        networks:
+            - api-monitoring-network
 
-    restart: unless-stopped 
-    # Restart policy for the service container. Options include: 'no', 'always', 'on-failure', and 'unless-stopped'.
+        restart: unless-stopped 
+        # Restart policy for the service container. Options include: 'no', 'always', 'on-failure', and 'unless-stopped'.
 
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${PG_USER} -d ${PG_DATABASE}" ]
-      interval: 10s
-      timeout: 30s # Maximum time to allow one check to run
-      retries: 5
-      start_period: 0s
-      # Every 10 seconds, Docker runs pg_isready inside the container to verify if Postgres is actively accepting connections. If it fails 5 times in a row, Docker marks the container as unhealthy.
-      # The start_period is the time Docker waits before starting the health check. During this time, the container is considered starting and is not marked as unhealthy even if the health check fails.
+        healthcheck:
+            test: [ "CMD-SHELL", "pg_isready -U ${PG_USER} -d ${PG_DATABASE}" ]
+            interval: 10s
+            timeout: 30s # Maximum time to allow one check to run
+            retries: 5
+            start_period: 0s
+            # Every 10 seconds, Docker runs pg_isready inside the container to verify if Postgres is actively accepting connections. If it fails 5 times in a row, Docker marks the container as unhealthy.
+            # The start_period is the time Docker waits before starting the health check. During this time, the container is considered starting and is not marked as unhealthy even if the health check fails.
 
-    deploy:   # The `deploy` section is used to configure the resources allocated to the container.
-      resources:
-        limits:
-          cpus: '1.5'
-          # The container can use at most 1.5 CPU cores simultaneously.
-          # (If your server has 4 cores, Postgres can utilize 100% of core 1 and up to 50% of core 2 (or spread equivalent processing power across cores).
-          # If Postgres tries to use more CPU, Docker throttles (slows down) the container.)
-          memory: 1024M # The container can use at most 1024MB (1GB) of RAM.
-        reservations:
-          cpus: '0.25' # The container is guaranteed a minimum of 0.25 CPU core.
-          memory: 256M # The container is guaranteed a minimum of 256MB of RAM.
+        deploy:   # The `deploy` section is used to configure the resources allocated to the container.
+            resources:
+                limits:
+                    cpus: '1.5'
+                    # The container can use at most 1.5 CPU cores simultaneously.
+                    # (If your server has 4 cores, Postgres can utilize 100% of core 1 and up to 50% of core 2 (or spread equivalent processing power across cores).
+                    # If Postgres tries to use more CPU, Docker throttles (slows down) the container.)
+                    memory: 1024M # The container can use at most 1024MB (1GB) of RAM.
+                reservations:
+                    cpus: '0.25' # The container is guaranteed a minimum of 0.25 CPU core.
+                    memory: 256M # The container is guaranteed a minimum of 256MB of RAM.
 
+
+    # pgAdmin (PostgreSQL web UI)
+    pgadmin:
+        image: dpage/pgadmin4:8.4
+        container_name: api-monitoring-pgadmin
+        environment:
+            PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+            PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+        ports:
+            - "8080:${PGADMIN_PORT}"
+        volumes:
+            - pgadmin_data:/var/lib/pgadmin
+        networks:
+            - api-monitoring-network
+        restart: unless-stopped
+        depends_on:
+            - postgres
+            
 
 volumes:
-  postgres_data:
-    driver: local
+    postgres_data:
+        driver: local
+    pgadmin_data:
+        driver: local
 
 networks:
-  api-monitoring-network:
-    driver: bridge
+    api-monitoring-network:
+        driver: bridge
