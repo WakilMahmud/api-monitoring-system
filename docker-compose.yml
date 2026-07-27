@@ -120,10 +120,32 @@ services:
             retries: 5
             start_period: 15s
 
-        restart: always 
+        restart: unless-stopped
         depends_on:
             - mongo
-            
+    
+
+    # RabbitMQ Message Queue
+    rabbitmq:
+        image: rabbitmq:4.3.4-management-alpine
+        container_name: api-monitoring-rabbitmq
+        environment:
+            RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+            RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+            RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_DEFAULT_VHOST}
+        ports:
+            - "5672:5672" # AMQP port
+            - "15672:15672" # Management UI
+        volumes:
+            - rabbitmq_data:/var/lib/rabbitmq
+        networks:
+            - api-monitoring-network
+        restart: unless-stopped
+        healthcheck:
+            test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+            interval: 30s
+            timeout: 10s
+            retries: 5    
 
 volumes:
     postgres_data:
@@ -131,6 +153,8 @@ volumes:
     pgadmin_data:
         driver: local
     mongo_data:
+        driver: local
+    rabbitmq_data:
         driver: local
         
 
