@@ -1,3 +1,4 @@
 {
-  "cSpell.words": ["cpus", "healthcheck", "initdb", "isready", "pgadmin"]
+  "cSpell.words": ["cpus", "healthcheck", "initdb", "isready", "pgadmin"],
+  "workbench.colorTheme": "Cobalt2"
 }
