@@ -1,7 +1,12 @@
+
+# Use container_name strictly for human-friendly terminal commands (like docker logs api-monitoring-mongo-service-container or docker exec).
+
+# Use service name (mongo) for ALL internal container-to-container communications (ME_CONFIG_MONGODB_SERVER, MONGO_URI, RABBITMQ_URL, depends_on, etc.).
+
 services:
     postgres:
         image: postgres:16-alpine
-        container_name: api-monitoring-postgres
+        container_name: api-monitoring-postgres-service-container
 
         # Load credentials securely from .env
         environment:
@@ -49,10 +54,10 @@ services:
     # pgAdmin (PostgreSQL web UI)
     pgadmin:
         image: dpage/pgadmin4:8.4
-        container_name: api-monitoring-pgadmin
+        container_name: api-monitoring-pgadmin-service-container
         environment:
-            PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
-            PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+            PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
+            PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
         ports:
             - "8080:${PGADMIN_PORT}"
         volumes:
@@ -61,12 +66,12 @@ services:
             - api-monitoring-network
         restart: unless-stopped
         depends_on:
-            - postgres
+            - postgres # In Docker Compose, the depends_on property requires the service key name, not the container_name
 
     
     mongo:
         image: mongo:8.3.7
-        container_name: api-monitoring-mongo
+        container_name: api-monitoring-mongo-service-container
         environment:
             MONGO_INITDB_DATABASE: ${MONGO_DATABASE}
             MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
@@ -96,16 +101,16 @@ services:
 
     mongo-express:
         image: mongo-express
-        container_name: api-monitoring-mongo-express
+        container_name: api-monitoring-mongo-express-service-container
         ports:
-            - 8081:${MONGO_EXPRESS_PORT}
+            - "8081:${MONGO_EXPRESS_PORT}"
         environment:
             # Connection settings to MongoDB container
-            ME_CONFIG_MONGODB_SERVER: api-monitoring-mongo
+            ME_CONFIG_MONGODB_SERVER: mongo # use service name for internal container-to-container communication
             ME_CONFIG_MONGODB_PORT: ${MONGO_PORT}
             ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_INITDB_ROOT_USERNAME}
             ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
-            ME_CONFIG_MONGODB_URL: mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@api-monitoring-mongo:${MONGO_PORT}/
+            ME_CONFIG_MONGODB_URL: mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongo:${MONGO_PORT}/${MONGO_DATABASE}
             
             # Web Interface Basic Auth Login Credentials
             ME_CONFIG_BASICAUTH_USERNAME: ${MONGO_EXPRESS_USERNAME}
@@ -128,11 +133,11 @@ services:
     # RabbitMQ Message Queue
     rabbitmq:
         image: rabbitmq:4.3.4-management-alpine
-        container_name: api-monitoring-rabbitmq
+        container_name: api-monitoring-rabbitmq-service-container
         environment:
-            RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
-            RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
-            RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_DEFAULT_VHOST}
+            RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+            RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS}
+            RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST}
         ports:
             - "5672:5672" # AMQP port
             - "15672:15672" # Management UI
@@ -145,7 +150,7 @@ services:
             test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
             interval: 30s
             timeout: 10s
-            retries: 5    
+            retries: 5
 
 volumes:
     postgres_data:
