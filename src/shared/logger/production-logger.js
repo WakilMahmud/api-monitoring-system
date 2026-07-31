@@ -9,7 +9,7 @@ const transports = [
 
 const ProductionLogger = winston.createLogger({
   level: "info",
-  defaultMeta: { service: "api-monitoring-production-service" },
+  defaultMeta: { service: "api-monitoring-production-logger-service" },
   transports,
   exitOnError: false,
 });

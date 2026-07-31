@@ -3,7 +3,7 @@ import { developmentConsoleFormat } from "./file-format.js";
 
 const DevelopmentLogger = winston.createLogger({
   level: "debug", // Write all logs with importance level of `debug` or higher  (i.e. error, warn, info, http, verbose, debug, but not silly)
-  defaultMeta: { service: "api-monitoring-development-service" }, // Injects this object into every log line (Useful when aggregating multi-service logs)
+  defaultMeta: { service: "api-monitoring-development-logger-service" }, // Injects this object into every log line (Useful when aggregating multi-service logs)
 
   // Log Output Destinations
   /**
