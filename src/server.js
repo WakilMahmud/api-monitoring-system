@@ -1,9 +1,33 @@
+import cookieParser from "cookie-parser";
+import cors from "cors";
 import express from "express";
+import helmet from "helmet";
 import config from "./shared/config/index.js";
+import mongodb from "./shared/config/mongodb.js";
+import postgres from "./shared/config/postgres.js";
+import rabbitmq from "./shared/config/rabbitmq.js";
 import logger from "./shared/logger/index.js";
+import errorHandler from "./shared/middlewares/error-handler.js";
+import ResponseFormatter from "./shared/utils/response-formatter.js";
 
+/**
+ * Initialize Express app
+ */
 const app = express();
-const port = config.port || 5000;
+
+/**
+ * Middlewares
+ */
+app.use(helmet()); // Helmet is a Node.js package that secures your Express (or Connect) apps by setting various HTTP headers. It mitigates common web vulnerabilities like Cross-Site Scripting (XSS), clickjacking, and MIME sniffing.
+app.use(
+  cors({
+    origin: true,
+    credentials: true,
+  }),
+);
+app.use(cookieParser()); //  Parse HTTP request cookies
+app.use(express.json()); // Parse incoming requests with JSON payloads
+app.use(express.urlencoded({ extended: true })); // Parse incoming requests with URL-encoded payloads
 
 /**
  * Request logging middleware
@@ -17,11 +41,133 @@ app.use((req, res, next) => {
   next();
 });
 
-app.get("/", (req, res) => {
-  res.send("Hello API Monitoring System");
+/**
+ * Health check endpoint
+ */
+app.get("/health", (req, res) => {
+  res.status(200).json(
+    ResponseFormatter.success(
+      {
+        status: "healthy",
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+      },
+      "Service is healthy",
+    ),
+  );
 });
 
-app.listen(port, () => {
-  //   logger.info("API Monitoring System started");
-  console.log(`Server is running on port ${port}`);
+/**
+ * Root endpoint
+ * Provides basic information about the API service and available endpoints.
+ */
+app.get("/", (req, res) => {
+  res.status(200).json(
+    ResponseFormatter.success(
+      {
+        service: "API Hit Monitoring System",
+        version: "1.0.0",
+        endpoints: {
+          health: "/health",
+          auth: "/api/auth",
+          ingest: "/api/hit",
+          analytics: "/api/analytics",
+        },
+      },
+      "API Hit Monitoring Service",
+    ),
+  );
 });
+
+/**
+ * 404 Handler
+ */
+app.use((req, res) => {
+  res.status(404).json(ResponseFormatter.error("Endpoint not found", 404));
+});
+
+app.use(errorHandler);
+
+/**
+ * Initialize database connections and start the server
+ */
+async function initializeConnection() {
+  try {
+    logger.info("Initializing database connections...");
+
+    // Connect to MongoDB;
+    await mongodb.connect();
+
+    // Connect to PG;
+    await postgres.testConnection();
+
+    // Connect to RabbitMQ;
+    await rabbitmq.connect();
+
+    logger.info("All connections established successfully");
+  } catch (error) {
+    logger.error("Failed to initialize connections:", error);
+    throw error;
+  }
+}
+
+/**
+ * Start the Express server after establishing database connections.
+ * Also sets up graceful shutdown handlers for SIGINT and SIGTERM signals.
+ * On shutdown, it closes the HTTP server and all database connections before exiting the process.
+ * If any error occurs during startup or shutdown, it logs the error and exits with a non-zero status code.
+ */
+async function startServer() {
+  try {
+    await initializeConnection();
+
+    const server = app.listen(config.port, () => {
+      logger.info(`Server started on port ${config.port}`);
+      logger.info(`Environment: ${config.node_env}`);
+      logger.info(`API available at: http://localhost:${config.port}`);
+    });
+
+    const gracefulShutdown = async (signal) => {
+      logger.info(`${signal} received, shutting down gracefully...`);
+
+      server.close(async () => {
+        logger.info("HTTP server closed");
+
+        try {
+          await mongodb.disconnect();
+          await postgres.close();
+          await rabbitmq.close();
+          logger.info("All connections closed, exiting process");
+          process.exit(0);
+        } catch (error) {
+          logger.error("Error during shutdown:", error);
+          process.exit(1);
+        }
+      });
+
+      setTimeout(() => {
+        logger.error("Forced shutdown");
+        process.exit(1);
+      }, 10000);
+    };
+
+    process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+    process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+
+    // Handle uncaught exceptions
+    process.on("uncaughtException", (error) => {
+      logger.error("Uncaught Exception:", error);
+      gracefulShutdown("uncaughtException");
+    });
+
+    process.on("unhandledRejection", (reason, promise) => {
+      logger.error("Unhandled Rejection at:", promise, "reason:", reason);
+      gracefulShutdown("unhandledRejection");
+    });
+  } catch (error) {
+    logger.error("Failed to start server:", error);
+    process.exit(1);
+  }
+}
+
+startServer();
