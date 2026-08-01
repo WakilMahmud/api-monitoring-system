@@ -1,4 +1,13 @@
 {
-  "cSpell.words": ["cpus", "healthcheck", "initdb", "isready", "pgadmin"],
+  "cSpell.words": [
+    "amqp",
+    "clickjacking",
+    "cpus",
+    "healthcheck",
+    "initdb",
+    "isready",
+    "pgadmin",
+    "vhost"
+  ],
   "workbench.colorTheme": "Cobalt2"
 }
