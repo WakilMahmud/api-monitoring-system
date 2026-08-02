@@ -156,7 +156,7 @@ services:
     api-monitoring-app:
         build:
             context: .
-            dockerfile: Dockerfile
+            dockerfile: Dockerfile.development
         container_name: api-monitoring-app-service-container
 
         # Passing environment variables here so that the Node.js process running inside the container can read process.env.*
@@ -165,6 +165,8 @@ services:
         ports:
             - "${PORT}:${PORT}"
         volumes:
+            - .:/app # Mount host directory into container for hot-reloading
+            - /app/node_modules # Prevent host node_modules from overwriting container node_modules
             - ./logs:/app/logs
         networks:
             - api-monitoring-network

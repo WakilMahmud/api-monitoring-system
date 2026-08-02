@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "node --watch src/server.js"
+    "dev": "nodemon -L src/server.js"
   },
   "keywords": [
     "api",
@@ -29,5 +29,8 @@
     "pg": "^8.22.0",
     "winston": "^3.19.0",
     "winston-daily-rotate-file": "^5.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
   }
 }
