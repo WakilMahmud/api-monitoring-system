@@ -8,15 +8,13 @@ const config = {
     host: process.env.PG_HOST || "localhost",
     port: parseInt(process.env.PG_PORT || "5432", 10),
     database: process.env.PG_DATABASE || "default_api_monitoring",
-    user: process.env.PG_USER || "default_postgres_user",
-    password: process.env.PG_PASSWORD || "default_postgres_pass",
+    user: process.env.PG_USER || "postgres",
+    password: process.env.PG_PASSWORD || "wakil@123",
   },
 
   // Mongodb
   mongo: {
-    uri:
-      process.env.MONGO_URI ||
-      "mongodb://localhost:27017/default_api_monitoring",
+    uri: process.env.MONGO_URI || "mongodb://localhost:27017/",
     dbName: process.env.MONGO_DATABASE || "default_api_monitoring",
   },
 
